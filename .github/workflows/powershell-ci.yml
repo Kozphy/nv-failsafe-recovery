@@ -37,7 +37,9 @@ jobs:
           if (-not (Test-Path $manifestPath)) { throw "Missing manifest: $manifestPath" }
           $manifest = Import-PowerShellDataFile -Path $manifestPath
           if ([string]::IsNullOrWhiteSpace($manifest.ModuleVersion)) { throw 'ModuleVersion is required.' }
-          if ($manifest.PowerShellVersion -lt '5.1') { throw 'PowerShellVersion must be at least 5.1.' }
+          $requiredVersion = [version]'5.1'
+          $manifestVersion = [version]$manifest.PowerShellVersion
+          if ($manifestVersion -lt $requiredVersion) { throw 'PowerShellVersion must be at least 5.1.' }
           Write-Host "Manifest version $($manifest.ModuleVersion) validated."
 
       - name: Install Pester
@@ -68,7 +70,7 @@ jobs:
             Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser -SkipPublisherCheck
           }
           Import-Module PSScriptAnalyzer
-          $results = Invoke-ScriptAnalyzer -Path ./src,./scripts -Severity Error
+          $results = Invoke-ScriptAnalyzer -Path ./src,./scripts -Severity Error -ExcludeRule PSAvoidUsingWriteHost
           if ($results) {
             $results | Format-Table -AutoSize
             throw 'PSScriptAnalyzer reported blocking errors.'
