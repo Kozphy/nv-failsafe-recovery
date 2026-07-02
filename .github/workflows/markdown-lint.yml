@@ -1,0 +1,23 @@
+name: Markdown Lint
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  markdown:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate markdown files exist
+        run: |
+          test -f README.md
+          test -f docs/architecture.md
+          test -f docs/safety-model.md
+
+      - name: Basic markdown checks
+        run: |
+          ! grep -R "<<<<<<<" README.md docs/ .github/ || (echo "Merge conflict marker found" && exit 1)

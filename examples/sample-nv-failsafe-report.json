@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-07-02T09:15:44.0000000Z",
+  "mode": "Report",
+  "hostname": "WORKSTATION-07",
+  "username": "engineer",
+  "summary": {
+    "timestamp": "2026-07-02T09:15:43.8810000Z",
+    "osVersion": "10.0.26200",
+    "powershellVersion": "5.1.26100.1",
+    "adminStatus": true,
+    "activeDisplayResolution": "640x480",
+    "is640x480": true,
+    "isSuspiciouslyLow": true,
+    "nvidiaAdapterPresent": true,
+    "gpuName": "NVIDIA GeForce RTX 3080",
+    "gpuStatus": "OK",
+    "driverVersion": "31.0.15.3743",
+    "pnpDeviceId": "PCI\\VEN_10DE&DEV_2206&SUBSYS_00000000&REV_A1",
+    "currentVideoMode": "640 x 480 x 32 True Color",
+    "monitorCount": 1,
+    "monitorNames": ["NV-Failsafe"],
+    "monitorPnPStatus": ["OK"],
+    "classification": "NV_FAILSAFE_SUSPECTED",
+    "confidence": 0.9,
+    "recommendedNextStep": "Try Win+Ctrl+Shift+B, then power-cycle monitor and replug HDMI/DisplayPort before automated fixes.",
+    "safetyNotes": [
+      "Classification is evidence-based suspicion, not proof.",
+      "Remediation defaults to preview-only without -Apply.",
+      "Adapter restart requires -Apply and -Force and may blank the display.",
+      "Some remediation actions require administrator privileges."
+    ]
+  },
+  "classification": {
+    "classification": "NV_FAILSAFE_SUSPECTED",
+    "confidence": 0.9,
+    "evidence": [
+      "Active resolution is exactly 640x480 with NVIDIA adapter present.",
+      "Monitor name evidence indicates NV-Failsafe.",
+      "One or more monitors appear generic or non-specific."
+    ],
+    "counterEvidence": [],
+    "recommendedNextStep": "Try Win+Ctrl+Shift+B, then power-cycle monitor and replug HDMI/DisplayPort before automated fixes.",
+    "manualSteps": [
+      "Press Win+Ctrl+Shift+B to reset the graphics driver.",
+      "Power-cycle the monitor and replug the display cable.",
+      "Try another HDMI/DisplayPort cable or GPU output port."
+    ],
+    "automatedSteps": [
+      "Run Fix mode with -FixLevel safe (preview first).",
+      "Consider Fix mode -FixLevel monitor with -Apply if handshake suspicion persists."
+    ],
+    "riskNotes": [],
+    "tags": [
+      "NV_FAILSAFE_SUSPECTED",
+      "MONITOR_EDID_HANDSHAKE_SUSPECTED"
+    ]
+  },
+  "policyPlan": [
+    {
+      "action": "DISPLAY_REFRESH_HINT",
+      "allowed": true,
+      "reason": "Action permitted by policy.",
+      "requiredFlags": [],
+      "riskLevel": "low",
+      "executionMode": "preview"
+    },
+    {
+      "action": "ADAPTER_RESTART",
+      "allowed": false,
+      "reason": "Requires -Force flag.",
+      "requiredFlags": ["Force"],
+      "riskLevel": "high",
+      "executionMode": "preview"
+    }
+  ]
+}

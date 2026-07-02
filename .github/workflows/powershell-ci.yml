@@ -1,0 +1,56 @@
+name: PowerShell CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  validate:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Parse all PowerShell scripts
+        shell: pwsh
+        run: |
+          $errors = @()
+          Get-ChildItem -Recurse -Filter '*.ps1' | ForEach-Object {
+            $parseErrors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$parseErrors)
+            if ($parseErrors) {
+              $errors += "Parse error in $($_.FullName): $($parseErrors[0].Message)"
+            }
+          }
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_ }
+            exit 1
+          }
+
+      - name: Run smoke test
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/Invoke-SmokeTest.ps1
+
+      - name: Run Pester tests if available
+        shell: pwsh
+        continue-on-error: false
+        run: |
+          if (Get-Module -ListAvailable -Name Pester) {
+            Import-Module Pester -MinimumVersion 5.0 -ErrorAction Stop
+            Invoke-Pester -Path ./tests -Output Detailed
+          }
+          else {
+            Write-Host 'Pester not installed on runner; running lightweight policy/classifier assertions.'
+            . ./src/Utilities.ps1
+            . ./src/Evidence.ps1
+            . ./src/Classifier.ps1
+            . ./src/Policy.ps1
+
+            $decision = Get-RemediationPolicyDecision -Action ADAPTER_RESTART -Apply:$true -Force:$false -IsAdministrator:$true -FixLevel adapter
+            if ($decision.allowed) { throw 'Expected adapter restart to be blocked without Force.' }
+            Write-Host 'Fallback assertions passed.'
+          }

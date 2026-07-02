@@ -1,0 +1,25 @@
+# Build / runtime artifacts
+*.log
+*.tmp
+nv-failsafe-report.json
+nv-failsafe-report-*.json
+nv-failsafe-audit.jsonl
+
+# PowerShell
+*.ps1xml
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Test output
+TestResults/
+coverage/
+
+# Local app data copies
+.local/

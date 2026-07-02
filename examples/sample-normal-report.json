@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-07-02T14:22:11.0000000Z",
+  "mode": "Report",
+  "hostname": "WORKSTATION-01",
+  "username": "analyst",
+  "summary": {
+    "timestamp": "2026-07-02T14:22:10.5120000Z",
+    "osVersion": "10.0.26200",
+    "powershellVersion": "7.4.2",
+    "adminStatus": false,
+    "activeDisplayResolution": "2560x1440",
+    "is640x480": false,
+    "isSuspiciouslyLow": false,
+    "nvidiaAdapterPresent": true,
+    "gpuName": "NVIDIA GeForce RTX 4070",
+    "gpuStatus": "OK",
+    "driverVersion": "31.0.15.4601",
+    "pnpDeviceId": "PCI\\VEN_10DE&DEV_2786&SUBSYS_00000000&REV_A1",
+    "currentVideoMode": "2560 x 1440 x 32 True Color",
+    "monitorCount": 1,
+    "monitorNames": ["DELL U2723QE(HDMI)"],
+    "monitorPnPStatus": ["OK"],
+    "classification": "NORMAL_DISPLAY_STATE",
+    "confidence": 0.72,
+    "recommendedNextStep": "No NV-Failsafe indicators detected; monitor for recurrence after sleep/wake.",
+    "safetyNotes": [
+      "Classification is evidence-based suspicion, not proof.",
+      "Remediation defaults to preview-only without -Apply.",
+      "Adapter restart requires -Apply and -Force and may blank the display."
+    ]
+  },
+  "classification": {
+    "classification": "NORMAL_DISPLAY_STATE",
+    "confidence": 0.72,
+    "evidence": ["Active resolution does not indicate NV-Failsafe fallback."],
+    "counterEvidence": [],
+    "recommendedNextStep": "No NV-Failsafe indicators detected; monitor for recurrence after sleep/wake.",
+    "manualSteps": [],
+    "automatedSteps": [],
+    "riskNotes": [],
+    "tags": ["NORMAL_DISPLAY_STATE"]
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-07-02T11:03:22.0000000Z",
+  "mode": "Fix",
+  "hostname": "WORKSTATION-12",
+  "username": "operator",
+  "summary": {
+    "classification": "NV_FAILSAFE_SUSPECTED",
+    "confidence": 0.86,
+    "activeDisplayResolution": "640x480",
+    "is640x480": true,
+    "recommendedNextStep": "Run safe fix preview before applying monitor-level actions."
+  },
+  "policyPlan": [
+    {
+      "action": "PNP_RESCAN",
+      "allowed": false,
+      "reason": "Requires administrator privileges.",
+      "requiredFlags": ["Administrator"],
+      "riskLevel": "medium",
+      "executionMode": "preview"
+    },
+    {
+      "action": "MONITOR_REFRESH",
+      "allowed": false,
+      "reason": "Requires administrator privileges.",
+      "requiredFlags": ["Administrator"],
+      "riskLevel": "medium",
+      "executionMode": "preview"
+    },
+    {
+      "action": "ADAPTER_RESTART",
+      "allowed": false,
+      "reason": "Requires -Apply flag. Requires -Force flag.",
+      "requiredFlags": ["Apply", "Force"],
+      "riskLevel": "high",
+      "executionMode": "preview"
+    }
+  ],
+  "remediationResults": [
+    {
+      "action": "PNP_RESCAN",
+      "mode": "blocked",
+      "allowed": false,
+      "reason": "Requires administrator privileges."
+    }
+  ]
+}
