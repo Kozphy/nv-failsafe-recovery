@@ -36,6 +36,11 @@ jobs:
           if ($manifest.ModuleVersion -ne $env:NV_FAILSAFE_VERSION) {
             throw "ModuleVersion '$($manifest.ModuleVersion)' in $manifestPath does not match tag version '$($env:NV_FAILSAFE_VERSION)'."
           }
+          if ([string]::IsNullOrWhiteSpace($manifest.PowerShellVersion)) { throw 'PowerShellVersion is required.' }
+          . ./src/Utilities.ps1
+          if (-not (Test-PowerShellVersionMeetsMinimum -Version $manifest.PowerShellVersion -MinimumVersion '5.1')) {
+            throw 'PowerShellVersion must be at least 5.1.'
+          }
           Write-Output "Module version $($manifest.ModuleVersion) matches tag."
 
       - name: Parse all PowerShell scripts

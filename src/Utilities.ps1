@@ -140,6 +140,19 @@ function Test-StringContainsAny {
     return $false
 }
 
+function Test-PowerShellVersionMeetsMinimum {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Version,
+
+        [Parameter(Mandatory = $true)]
+        [string]$MinimumVersion
+    )
+
+    return ([version]$Version -ge [version]$MinimumVersion)
+}
+
 function Get-ToolkitVersion {
     [CmdletBinding()]
     param()
