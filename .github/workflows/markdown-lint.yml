@@ -20,4 +20,4 @@ jobs:
 
       - name: Basic markdown checks
         run: |
-          ! grep -R "<<<<<<<" README.md docs/ .github/ || (echo "Merge conflict marker found" && exit 1)
+          ! grep -R --exclude-dir=workflows "<<<<<<<" README.md docs/ .github/ISSUE_TEMPLATE .github/pull_request_template.md || (echo "Merge conflict marker found" && exit 1)
