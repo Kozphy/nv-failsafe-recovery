@@ -1,47 +1,46 @@
 # Evidence Schema
 
-Report schema version: `1.0.0`
+Report schema version: **1.1.0**
 
 ## Top-level report
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `schemaVersion` | string | Report schema version |
+| `schemaVersion` | string | Report schema version (`1.1.0`) |
 | `generatedAt` | ISO-8601 | Report generation timestamp (UTC) |
 | `mode` | string | CLI mode used |
 | `hostname` | string | Computer name |
 | `username` | string | Current user |
-| `summary` | object | Human-oriented summary block |
+| `report` | object | Structured machine-readable summary (see below) |
+| `summary` | object | Human-oriented summary block (backward compatible) |
 | `evidence` | object | Full evidence bundle |
 | `classification` | object | Classifier output |
 | `policyPlan` | array | Optional policy decisions per action |
 | `remediationResults` | array | Optional remediation execution results |
 | `verification` | object | Optional before/after comparison |
 
-## Summary block
+## Structured `report` block (1.1.0)
 
 | Field | Description |
 |-------|-------------|
-| `activeDisplayResolution` | e.g. `2560x1440` |
-| `is640x480` | True when exactly 640x480 |
-| `isSuspiciouslyLow` | True when resolution <= 800x600 |
-| `nvidiaAdapterPresent` | NVIDIA adapter detected |
-| `gpuName` | Primary GPU friendly name |
-| `gpuStatus` | CIM status |
-| `driverVersion` | Installed driver version |
-| `pnpDeviceId` | Primary GPU PnP ID |
-| `currentVideoMode` | Active video mode description |
-| `monitorCount` | Enumerated monitors |
-| `monitorNames` | Monitor friendly names |
-| `monitorPnPStatus` | Monitor statuses |
-| `classification` | Primary classification |
-| `confidence` | 0..1 heuristic confidence |
-| `recommendedNextStep` | Next operational step |
-| `safetyNotes` | Safety reminders |
+| `timestamp` | Evidence collection time |
+| `hostname` | Computer name |
+| `os` | OS probe data |
+| `gpu_adapters` | GPU adapter objects |
+| `display_adapters` | PnP display entities |
+| `monitor_devices` | Monitor device objects |
+| `current_resolution` | e.g. `1920x1080` |
+| `suspected_tags` | Classification tags |
+| `evidence_items` | Supporting evidence strings |
+| `confidence_level` | 0..1 heuristic |
+| `explanation` | Hypothesis summary (not proof) |
+| `recommended_actions` | Policy-recommended actions |
+| `preview_actions` | Actions that would run in preview |
+| `applied_actions` | Actions executed in apply mode |
+| `safety_warnings` | Safety reminders |
+| `verification_result` | Verify comparison object |
 
 ## Probe object (`evidence.*`)
-
-Each probe includes:
 
 | Field | Values | Description |
 |-------|--------|-------------|
@@ -50,20 +49,6 @@ Each probe includes:
 | `data` | object | Structured probe payload |
 | `errorMessage` | string | Error detail when applicable |
 | `collectedAt` | ISO-8601 | Probe timestamp |
-
-## Classification object
-
-| Field | Description |
-|-------|-------------|
-| `classification` | Primary enum value |
-| `confidence` | Bounded heuristic score |
-| `evidence` | Supporting evidence strings |
-| `counterEvidence` | Contradicting evidence strings |
-| `recommendedNextStep` | Primary recommendation |
-| `manualSteps` | Manual operator steps |
-| `automatedSteps` | Toolkit step suggestions |
-| `riskNotes` | Risk qualifiers |
-| `tags` | Additional classification tags |
 
 ## Audit event (JSONL)
 
@@ -74,10 +59,12 @@ Each probe includes:
 | `mode` | CLI mode |
 | `classification` | Classification at event time |
 | `action` | Remediation action if applicable |
+| `fixLevel` | `none`, `safe`, `monitor`, `adapter` |
+| `applyUsed` | Whether `-Apply` was active |
+| `forceUsed` | Whether `-Force` was active |
+| `executionMode` | `preview`, `apply`, `blocked`, `manual_only`, `guidance` |
 | `policyDecision` | Embedded policy object |
-| `result` | `started`, `preview`, `success`, `blocked`, `error` |
+| `result` | Event outcome |
 | `error` | Error text |
-| `hostname` | Computer name |
-| `username` | User name |
 
-See `examples/` for realistic samples.
+See `examples/nv-failsafe-report.sample.json` and `examples/audit-log.sample.jsonl`.

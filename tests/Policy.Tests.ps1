@@ -33,4 +33,11 @@ Describe 'Policy gates' {
         $decision = Get-RemediationPolicyDecision -Action 'ADAPTER_RESTART' -Apply:$true -Force:$true -IsAdministrator $true -FixLevel 'adapter'
         $decision.allowed | Should Be $true
     }
+
+    It 'marks driver reinstall guidance as manual-only' {
+        $decision = Get-RemediationPolicyDecision -Action 'DRIVER_REINSTALL_GUIDANCE' -Apply:$false -FixLevel 'safe'
+        $decision.allowed | Should Be $true
+        $decision.manualOnly | Should Be $true
+        $decision.executionMode | Should Be 'manual_only'
+    }
 }

@@ -144,5 +144,25 @@ function Get-ToolkitVersion {
     [CmdletBinding()]
     param()
 
-    return '1.0.0'
+    return '1.1.0'
+}
+
+function Get-ReportSchemaVersion {
+    [CmdletBinding()]
+    param()
+
+    return '1.1.0'
+}
+
+function ConvertTo-LegacyClassification {
+    [CmdletBinding()]
+    param(
+        [string]$Classification
+    )
+
+    switch ($Classification) {
+        'NO_ISSUE_DETECTED' { return 'NORMAL_DISPLAY_STATE' }
+        'LOW_RESOLUTION_FALLBACK' { return 'LOW_RESOLUTION_ONLY' }
+        default { return $Classification }
+    }
 }

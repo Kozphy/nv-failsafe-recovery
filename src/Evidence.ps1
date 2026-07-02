@@ -248,7 +248,7 @@ function Get-FullEvidenceBundle {
     elseif ($hasUnavailable) { $collectionStatus = 'warning' }
 
     return [PSCustomObject]@{
-        schemaVersion = '1.0.0'
+        schemaVersion = '1.1.0'
         collectedAt   = (Get-Date).ToUniversalTime().ToString('o')
         collectionStatus = $collectionStatus
         system        = $system

@@ -22,7 +22,13 @@ function Write-AuditEvent {
         [string]$Action = '',
         [object]$PolicyDecision = $null,
         [string]$Result = '',
-        [string]$Error = ''
+        [string]$Error = '',
+        [ValidateSet('', 'none', 'safe', 'monitor', 'adapter')]
+        [string]$FixLevel = '',
+        [bool]$ApplyUsed = $false,
+        [bool]$ForceUsed = $false,
+        [ValidateSet('', 'preview', 'apply', 'blocked', 'guidance', 'verify')]
+        [string]$ExecutionMode = ''
     )
 
     $directory = Split-Path -Parent $AuditPath
@@ -36,6 +42,10 @@ function Write-AuditEvent {
         mode           = $Mode
         classification = $Classification
         action         = $Action
+        fixLevel       = $FixLevel
+        applyUsed      = $ApplyUsed
+        forceUsed      = $ForceUsed
+        executionMode  = $ExecutionMode
         policyDecision = ConvertTo-OrderedHashtable -InputObject $PolicyDecision
         result         = $Result
         error          = $Error
@@ -45,7 +55,8 @@ function Write-AuditEvent {
     }
 
     $json = ($event | ConvertTo-Json -Depth 8 -Compress)
-    Add-Content -LiteralPath $AuditPath -Value $json -Encoding UTF8
+    $line = $json + [Environment]::NewLine
+    [System.IO.File]::AppendAllText($AuditPath, $line, [System.Text.UTF8Encoding]::new($false))
 }
 
 function Read-AuditEvents {
@@ -66,4 +77,21 @@ function Read-AuditEvents {
         }
     }
     return $events
+}
+
+function Test-AuditLogAppendOnly {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$AuditPath,
+
+        [int]$MinimumEventCount = 1
+    )
+
+    if (-not (Test-Path -LiteralPath $AuditPath)) {
+        return $false
+    }
+
+    $events = Read-AuditEvents -AuditPath $AuditPath
+    return ($events.Count -ge $MinimumEventCount)
 }

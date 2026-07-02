@@ -31,7 +31,7 @@ function New-MockEvidence {
     $height = if ($Is640x480) { 480 } else { 1080 }
 
     return [PSCustomObject]@{
-        schemaVersion = '1.0.0'
+        schemaVersion = '1.1.0'
         collectedAt   = (Get-Date).ToUniversalTime().ToString('o')
         collectionStatus = 'ok'
         system = [PSCustomObject]@{
@@ -39,7 +39,7 @@ function New-MockEvidence {
             username = 'testuser'
             timestamp = (Get-Date).ToUniversalTime().ToString('o')
             powershellVersion = '5.1'
-            toolkitVersion = '1.0.0'
+            toolkitVersion = '1.1.0'
             operatingSystem = New-MockProbe -Data @{
                 caption = 'Microsoft Windows 11'
                 version = '10.0.26200'
@@ -93,18 +93,32 @@ Describe 'Classifier rules' {
         $result = Get-NvFailsafeClassification -Evidence $evidence
         $result.classification | Should Be 'NV_FAILSAFE_SUSPECTED'
         $result.confidence | Should BeGreaterThan 0.7
+        $result.explanation | Should Not BeNullOrEmpty
     }
 
-    It 'classifies non-NVIDIA + 640x480 as LOW_RESOLUTION_ONLY' {
+    It 'classifies non-NVIDIA + 640x480 as LOW_RESOLUTION_FALLBACK' {
         $evidence = New-MockEvidence -Is640x480 $true -NvidiaPresent $false
         $result = Get-NvFailsafeClassification -Evidence $evidence
-        $result.classification | Should Be 'LOW_RESOLUTION_ONLY'
+        $result.classification | Should Be 'LOW_RESOLUTION_FALLBACK'
     }
 
-    It 'flags monitor handshake suspicion when monitor info is generic' {
+    It 'flags generic monitor profile suspicion' {
+        $evidence = New-MockEvidence -GenericCount 1
+        $result = Get-NvFailsafeClassification -Evidence $evidence
+        $result.tags -contains 'GENERIC_MONITOR_PROFILE_SUSPECTED' | Should Be $true
+    }
+
+    It 'flags monitor handshake suspicion when monitor info is generic with low resolution' {
         $evidence = New-MockEvidence -Is640x480 $true -GenericCount 1
         $result = Get-NvFailsafeClassification -Evidence $evidence
-        $result.tags -contains 'MONITOR_EDID_HANDSHAKE_SUSPECTED' | Should Be $true
+        $result.tags -contains 'MONITOR_EDID_HANDSHAKE_SUSPECTED' | Should Be $false
+        $result.tags -contains 'GENERIC_MONITOR_PROFILE_SUSPECTED' | Should Be $true
+    }
+
+    It 'classifies healthy resolution as NO_ISSUE_DETECTED' {
+        $evidence = New-MockEvidence
+        $result = Get-NvFailsafeClassification -Evidence $evidence
+        $result.classification | Should Be 'NO_ISSUE_DETECTED'
     }
 
     It 'returns INSUFFICIENT_DATA when multiple probes fail' {

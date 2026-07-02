@@ -11,52 +11,59 @@ Set-StrictMode -Version Latest
 
 $script:ActionCatalog = [ordered]@{
     DISPLAY_REFRESH_HINT      = @{
-        riskLevel    = 'low'
+        riskLevel     = 'low'
         requiresAdmin = $false
         requiresApply = $false
         requiresForce = $false
+        manualOnly    = $false
         fixLevels     = @('safe', 'monitor', 'adapter')
     }
     EXPLORER_RESTART          = @{
-        riskLevel    = 'low'
+        riskLevel     = 'low'
         requiresAdmin = $false
         requiresApply = $true
         requiresForce = $false
+        manualOnly    = $false
         fixLevels     = @('safe', 'monitor', 'adapter')
     }
     PNP_RESCAN                = @{
-        riskLevel    = 'medium'
+        riskLevel     = 'medium'
         requiresAdmin = $true
         requiresApply = $true
         requiresForce = $false
+        manualOnly    = $false
         fixLevels     = @('monitor', 'adapter')
     }
     MONITOR_REFRESH           = @{
-        riskLevel    = 'medium'
+        riskLevel     = 'medium'
         requiresAdmin = $true
         requiresApply = $true
         requiresForce = $false
+        manualOnly    = $false
         fixLevels     = @('monitor', 'adapter')
     }
     ADAPTER_RESTART           = @{
-        riskLevel    = 'high'
+        riskLevel     = 'high'
         requiresAdmin = $true
         requiresApply = $true
         requiresForce = $true
+        manualOnly    = $false
         fixLevels     = @('adapter')
     }
     DRIVER_REINSTALL_GUIDANCE = @{
-        riskLevel    = 'guidance'
+        riskLevel     = 'guidance'
         requiresAdmin = $false
         requiresApply = $false
         requiresForce = $false
+        manualOnly    = $true
         fixLevels     = @('safe', 'monitor', 'adapter')
     }
     DDU_LAST_RESORT_GUIDANCE  = @{
-        riskLevel    = 'guidance'
+        riskLevel     = 'guidance'
         requiresAdmin = $false
         requiresApply = $false
         requiresForce = $false
+        manualOnly    = $true
         fixLevels     = @('safe', 'monitor', 'adapter')
     }
 }
@@ -101,11 +108,13 @@ function Get-RemediationPolicyDecision {
 
     if (-not $script:ActionCatalog.Contains($Action)) {
         return [PSCustomObject]@{
-            action        = $Action
-            allowed       = $false
-            reason        = 'Unknown action.'
-            requiredFlags = @()
-            riskLevel     = 'unknown'
+            action         = $Action
+            allowed        = $false
+            reason         = 'Unknown action.'
+            requiredFlags  = @()
+            riskLevel      = 'unknown'
+            manualOnly     = $false
+            executionMode  = 'blocked'
         }
     }
 
@@ -138,23 +147,31 @@ function Get-RemediationPolicyDecision {
         $reasons.Add('Requires -Force flag.')
     }
 
-    if ($Action -eq 'DDU_LAST_RESORT_GUIDANCE') {
-        $reasons.Add('Guidance only; toolkit never executes DDU.')
-    }
-
-    if ($Action -eq 'DRIVER_REINSTALL_GUIDANCE') {
-        $reasons.Add('Guidance only; toolkit never uninstalls drivers.')
+    if ($Action -eq 'DDU_LAST_RESORT_GUIDANCE' -or $Action -eq 'DRIVER_REINSTALL_GUIDANCE') {
+        return [PSCustomObject]@{
+            action         = $Action
+            allowed        = $true
+            reason         = 'Manual-only escalation; toolkit provides guidance only.'
+            requiredFlags  = @()
+            riskLevel      = $meta.riskLevel
+            manualOnly     = $true
+            executionMode  = 'manual_only'
+        }
     }
 
     $allowed = ($reasons.Count -eq 0)
     $reason = if ($allowed) { 'Action permitted by policy.' } else { ($reasons -join ' ') }
 
+    $executionMode = if ($meta.manualOnly) { 'manual_only' } elseif ($meta.requiresApply -and -not $Apply) { 'preview' } elseif ($Apply -and $allowed) { 'apply' } else { 'preview' }
+
     return [PSCustomObject]@{
-        action        = $Action
-        allowed       = $allowed
-        reason        = $reason
-        requiredFlags = $requiredFlags.ToArray()
-        riskLevel     = $meta.riskLevel
+        action         = $Action
+        allowed        = $allowed
+        reason         = $reason
+        requiredFlags  = $requiredFlags.ToArray()
+        riskLevel      = $meta.riskLevel
+        manualOnly     = [bool]$meta.manualOnly
+        executionMode  = $executionMode
     }
 }
 
@@ -186,7 +203,8 @@ function Get-FixPlan {
             reason         = $decision.reason
             requiredFlags  = $decision.requiredFlags
             riskLevel      = $decision.riskLevel
-            executionMode  = if ($Apply -and $decision.allowed) { 'execute' } else { 'preview' }
+            manualOnly     = $decision.manualOnly
+            executionMode  = if ($decision.manualOnly) { 'manual_only' } elseif ($Apply -and $decision.allowed) { 'apply' } else { 'preview' }
         }
     }
 

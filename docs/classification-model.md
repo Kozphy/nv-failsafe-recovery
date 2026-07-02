@@ -1,59 +1,51 @@
 # Classification Model
 
-Classifications are **suspicion labels**, not diagnoses.
+Classifications are **suspicion labels**, not diagnoses. Schema version **1.1.0**.
 
 ## Primary classifications
 
 | Value | Meaning | Typical evidence |
 |-------|---------|------------------|
-| `NORMAL_DISPLAY_STATE` | No NV-Failsafe indicators | Normal resolution, stable monitors |
+| `NO_ISSUE_DETECTED` | No active NV-Failsafe fallback | Normal resolution, stable monitors |
 | `NV_FAILSAFE_SUSPECTED` | NVIDIA + 640x480 fallback pattern | 640x480 + NVIDIA adapter |
-| `LOW_RESOLUTION_ONLY` | Low resolution without NVIDIA pattern | 640x480, no NVIDIA |
+| `LOW_RESOLUTION_FALLBACK` | Low resolution without NV-Failsafe pattern | 640x480 or low res, no NVIDIA |
 | `INSUFFICIENT_DATA` | Too many probe failures | Multiple `error`/`unavailable` probes |
-| `ADMIN_REQUIRED` | Tag: elevated actions needed | Non-admin + remediation suggested |
 
-## Secondary tags
+## Secondary tags (`suspected_tags`)
 
 | Tag | Meaning |
 |-----|---------|
-| `MONITOR_EDID_HANDSHAKE_SUSPECTED` | Generic/missing/unstable monitor entities |
+| `MONITOR_EDID_HANDSHAKE_SUSPECTED` | NV-Failsafe name, missing monitors, unstable PnP |
+| `GENERIC_MONITOR_PROFILE_SUSPECTED` | Generic/non-specific monitor names |
 | `NVIDIA_DRIVER_FALLBACK_SUSPECTED` | Non-OK GPU status or fallback-like video mode |
-| `SLEEP_WAKE_DISPLAY_INIT_SUSPECTED` | Recent boot + display symptoms |
-| `MONITOR_PNP_DRIFT_SUSPECTED` | PnP entity status drift |
-| `ACTION_BLOCKED_BY_POLICY` | Used in policy/audit contexts |
+
+## Required classifier output
+
+Each result includes:
+
+- `classification` — primary label
+- `confidence` — bounded heuristic 0..1
+- `evidence` — supporting strings
+- `counterEvidence` — contradicting strings
+- `explanation` — human-readable hypothesis summary
+- `recommendedNextStep` — next operational step
+- `manualSteps` / `automatedSteps`
+- `riskNotes`
+- `tags` — all suspected tags
 
 ## Rules (simplified)
 
-1. **640x480 + NVIDIA** → `NV_FAILSAFE_SUSPECTED` (confidence ~0.82)
-2. **640x480 + no NVIDIA** → `LOW_RESOLUTION_ONLY`
-3. **Generic/missing monitors** → add handshake tag
-4. **GPU status != OK** or fallback video mode → add driver fallback tag
-5. **>=2 critical probe failures** → `INSUFFICIENT_DATA`
-6. **Hardware failure** is not inferred unless stronger evidence exists (Code 43, crashes, artifacts, repeated adapter errors)
+1. **640x480 + NVIDIA** → `NV_FAILSAFE_SUSPECTED`
+2. **640x480 + no NVIDIA** → `LOW_RESOLUTION_FALLBACK`
+3. **Generic monitor names** → `GENERIC_MONITOR_PROFILE_SUSPECTED`
+4. **Handshake indicators** → `MONITOR_EDID_HANDSHAKE_SUSPECTED`
+5. **GPU status != OK** → `NVIDIA_DRIVER_FALLBACK_SUSPECTED`
+6. **>=2 critical probe failures** → `INSUFFICIENT_DATA`
+7. **Hardware failure** is not inferred from resolution alone
 
-## Confidence
+## Legacy mapping
 
-Confidence is heuristic and explainable:
-
-- Starts from baseline (~0.35–0.55)
-- Increases with corroborating probes
-- Capped at 0.95
-- Never presented as certainty
-
-## Output contract
-
-```json
-{
-  "classification": "NV_FAILSAFE_SUSPECTED",
-  "confidence": 0.82,
-  "evidence": [],
-  "counterEvidence": [],
-  "recommendedNextStep": "",
-  "manualSteps": [],
-  "automatedSteps": [],
-  "riskNotes": [],
-  "tags": []
-}
-```
-
-Every `evidence[]` entry should be traceable to a probe in the report.
+| Legacy | Current |
+|--------|---------|
+| `NORMAL_DISPLAY_STATE` | `NO_ISSUE_DETECTED` |
+| `LOW_RESOLUTION_ONLY` | `LOW_RESOLUTION_FALLBACK` |

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "1.1.0",
+  "generatedAt": "2026-07-02T09:15:44.0000000Z",
+  "mode": "Report",
+  "hostname": "WORKSTATION-07",
+  "username": "engineer",
+  "report": {
+    "timestamp": "2026-07-02T09:15:43.8810000Z",
+    "hostname": "WORKSTATION-07",
+    "os": {
+      "caption": "Microsoft Windows 11 Pro",
+      "version": "10.0.26200",
+      "buildNumber": "26200"
+    },
+    "gpu_adapters": [
+      {
+        "name": "NVIDIA GeForce RTX 3080",
+        "status": "OK",
+        "driverVersion": "31.0.15.3743",
+        "isNvidia": true
+      }
+    ],
+    "display_adapters": [],
+    "monitor_devices": [
+      {
+        "name": "NV-Failsafe",
+        "status": "OK",
+        "isGeneric": true
+      }
+    ],
+    "current_resolution": "640x480",
+    "suspected_tags": [
+      "NV_FAILSAFE_SUSPECTED",
+      "GENERIC_MONITOR_PROFILE_SUSPECTED",
+      "MONITOR_EDID_HANDSHAKE_SUSPECTED"
+    ],
+    "evidence_items": [
+      "Active resolution is exactly 640x480 with NVIDIA adapter present.",
+      "Monitor name evidence indicates NV-Failsafe.",
+      "One or more monitors appear generic or non-specific."
+    ],
+    "confidence_level": 0.9,
+    "explanation": "Evidence indicates a suspected NVIDIA NV-Failsafe / 640x480 fallback pattern. This is a hypothesis based on resolution and adapter evidence, not proof of hardware failure.",
+    "recommended_actions": [],
+    "preview_actions": ["DISPLAY_REFRESH_HINT", "EXPLORER_RESTART"],
+    "applied_actions": [],
+    "safety_warnings": [
+      "Classification is evidence-based suspicion, not proof.",
+      "Remediation defaults to preview-only without -Apply.",
+      "Adapter restart requires -Apply and -Force and may blank the display."
+    ],
+    "verification_result": null
+  },
+  "summary": {
+    "classification": "NV_FAILSAFE_SUSPECTED",
+    "confidence": 0.9,
+    "activeDisplayResolution": "640x480",
+    "is640x480": true,
+    "recommendedNextStep": "Try Win+Ctrl+Shift+B, then power-cycle monitor and replug HDMI/DisplayPort before automated fixes."
+  }
+}

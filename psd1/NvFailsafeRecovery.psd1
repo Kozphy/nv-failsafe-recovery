@@ -1,6 +1,6 @@
 @{
     RootModule        = 'NvFailsafeRecovery.ps1'
-    ModuleVersion     = '1.0.0'
+    ModuleVersion     = '1.1.0'
     GUID              = 'a4f8c2e1-9b3d-4f6a-8c7e-1d2e3f4a5b6c'
     Author            = 'NV-Failsafe Recovery Contributors'
     CompanyName       = 'Kozphy'

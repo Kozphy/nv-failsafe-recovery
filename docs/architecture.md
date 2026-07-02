@@ -12,11 +12,13 @@ CLI → Evidence → Classifier → Policy → Remediation → Audit → Report
 |--------|----------------|
 | `scripts/NvFailsafeRecovery.ps1` | CLI orchestration and mode routing |
 | `src/Evidence.ps1` | Local probe collection (CIM/PnP) |
-| `src/Classifier.ps1` | Evidence-based suspicion scoring |
-| `src/Policy.ps1` | Action authorization gates |
+| `src/Classifier.ps1` | Evidence-based suspicion scoring + explanations |
+| `src/Policy.ps1` | Action authorization gates + manual-only escalation |
 | `src/Remediation.ps1` | Preview/apply remediation actions |
 | `src/Audit.ps1` | Append-only JSONL audit trail |
-| `src/Reporting.ps1` | Human + JSON report generation |
+| `src/Reporting.ps1` | Structured report (v1.1.0) + human summary |
+
+Report schema **1.1.0** adds a top-level `report` object separating evidence, hypothesis (`explanation`), preview actions, applied actions, and verification.
 
 ## Modes
 

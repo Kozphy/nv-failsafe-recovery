@@ -60,7 +60,26 @@ function Invoke-NvDetectPhase {
     return $report
 }
 
-Write-AuditEvent -AuditPath $AuditPath -EventType 'session_start' -Mode $Mode -Result 'started'
+function Write-SessionAuditEvent {
+    param(
+        [string]$EventType,
+        [string]$Result,
+        [string]$ErrorMessage = ''
+    )
+
+    $effectiveFixLevel = if ($script:NvFixLevel) { $script:NvFixLevel } else { 'none' }
+    Write-AuditEvent -AuditPath $script:NvAuditPath -EventType $EventType -Mode $script:NvMode `
+        -Result $Result -Error $ErrorMessage -FixLevel $effectiveFixLevel `
+        -ApplyUsed ([bool]$script:NvApply) -ForceUsed ([bool]$script:NvForce)
+}
+
+$script:NvAuditPath = $AuditPath
+$script:NvMode = $Mode
+$script:NvFixLevel = $FixLevel
+$script:NvApply = $Apply.IsPresent
+$script:NvForce = $Force.IsPresent
+
+Write-SessionAuditEvent -EventType 'session_start' -Result 'started'
 
 try {
     switch ($Mode) {
@@ -90,6 +109,9 @@ try {
                 $null = Write-HumanSummary -Report $report -Quiet:$false
                 Write-Output ''
                 Write-Output 'Likely cause (evidence-based):'
+                if ($report.classification.explanation) {
+                    Write-Output "  $($report.classification.explanation)"
+                }
                 foreach ($item in $report.classification.evidence) {
                     Write-Output "  - $item"
                 }
@@ -130,7 +152,7 @@ try {
                     Write-Output '=== Fix Preview (no system changes) ==='
                     $null = Write-HumanSummary -Report $before -Quiet:$false
                 }
-                Write-AuditEvent -AuditPath $AuditPath -EventType 'fix_preview' -Mode 'Fix' -Classification $before.classification.classification -Result 'preview'
+                Write-AuditEvent -AuditPath $AuditPath -EventType 'fix_preview' -Mode 'Fix' -Classification $before.classification.classification -Result 'preview' -FixLevel $effectiveFixLevel -ApplyUsed:$false -ForceUsed:$Force.IsPresent -ExecutionMode 'preview'
             }
             else {
                 $results = Invoke-RemediationPlan -Plan $before.policyPlan -Apply:$true -Force:$Force -AuditPath $AuditPath -Mode 'Fix' -Classification $before.classification.classification -FixLevel $effectiveFixLevel
@@ -187,10 +209,10 @@ try {
         }
     }
 
-    Write-AuditEvent -AuditPath $AuditPath -EventType 'session_complete' -Mode $Mode -Result 'success'
+    Write-SessionAuditEvent -EventType 'session_complete' -Result 'success'
 }
 catch {
-    Write-AuditEvent -AuditPath $AuditPath -EventType 'session_error' -Mode $Mode -Result 'error' -Error $_.Exception.Message
+    Write-SessionAuditEvent -EventType 'session_error' -Result 'error' -ErrorMessage $_.Exception.Message
     Write-Error $_.Exception.Message
     exit 1
 }

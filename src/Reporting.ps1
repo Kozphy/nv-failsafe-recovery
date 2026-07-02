@@ -8,6 +8,48 @@ Set-StrictMode -Version Latest
 
 . "$PSScriptRoot\Utilities.ps1"
 
+function Get-ReportActionLists {
+    param(
+        [object]$PolicyPlan,
+        [object]$RemediationResults
+    )
+
+    $preview = [System.Collections.Generic.List[string]]::new()
+    $applied = [System.Collections.Generic.List[string]]::new()
+    $recommended = [System.Collections.Generic.List[string]]::new()
+
+    if ($PolicyPlan) {
+        foreach ($item in $PolicyPlan) {
+            if ($item.manualOnly) {
+                $recommended.Add("$($item.action) (manual-only)")
+            }
+            elseif ($item.executionMode -eq 'preview' -and $item.allowed) {
+                $preview.Add($item.action)
+            }
+            elseif ($item.executionMode -eq 'apply') {
+                $preview.Add($item.action)
+            }
+            elseif (-not $item.allowed) {
+                $recommended.Add("$($item.action) (blocked: $($item.reason))")
+            }
+        }
+    }
+
+    if ($RemediationResults) {
+        foreach ($result in $RemediationResults) {
+            if ($result.mode -in @('apply', 'guidance') -and $result.action) {
+                $applied.Add($result.action)
+            }
+        }
+    }
+
+    return [PSCustomObject]@{
+        previewActions      = $preview.ToArray()
+        appliedActions      = $applied.ToArray()
+        recommendedActions  = $recommended.ToArray()
+    }
+}
+
 function New-NvFailsafeReport {
     [CmdletBinding()]
     param(
@@ -28,6 +70,7 @@ function New-NvFailsafeReport {
         $resolution = $Evidence.display.data.activeResolution
     }
 
+    $gpuAdapters = @()
     $nvidiaPresent = $false
     $gpuName = $null
     $gpuStatus = $null
@@ -36,7 +79,8 @@ function New-NvFailsafeReport {
 
     if ($Evidence.gpu.status -eq 'ok') {
         $nvidiaPresent = [bool]$Evidence.gpu.data.nvidiaAdapterPresent
-        $primary = $Evidence.gpu.data.adapters | Select-Object -First 1
+        $gpuAdapters = @($Evidence.gpu.data.adapters)
+        $primary = $gpuAdapters | Select-Object -First 1
         if ($primary) {
             $gpuName = $primary.name
             $gpuStatus = $primary.status
@@ -45,16 +89,28 @@ function New-NvFailsafeReport {
         }
     }
 
+    $monitorDevices = @()
     $monitorNames = @()
     $monitorPnPStatus = @()
     if ($Evidence.monitor.status -eq 'ok') {
-        $monitorNames = @($Evidence.monitor.data.monitors | ForEach-Object { $_.name })
-        $monitorPnPStatus = @($Evidence.monitor.data.monitors | ForEach-Object { $_.status })
+        $monitorDevices = @($Evidence.monitor.data.monitors)
+        $monitorNames = @($monitorDevices | ForEach-Object { $_.name })
+        $monitorPnPStatus = @($monitorDevices | ForEach-Object { $_.status })
+    }
+
+    $displayAdapters = @()
+    if ($Evidence.pnpDisplay.status -eq 'ok') {
+        $displayAdapters = @($Evidence.pnpDisplay.data.entities)
     }
 
     $isAdmin = $false
     if ($Evidence.system.adminStatus.status -eq 'ok') {
         $isAdmin = [bool]$Evidence.system.adminStatus.data.isAdministrator
+    }
+
+    $osInfo = $null
+    if ($Evidence.system.operatingSystem.status -eq 'ok') {
+        $osInfo = $Evidence.system.operatingSystem.data
     }
 
     $safetyNotes = [System.Collections.Generic.List[string]]::new()
@@ -65,15 +121,37 @@ function New-NvFailsafeReport {
         $safetyNotes.Add($note)
     }
 
+    $actionLists = Get-ReportActionLists -PolicyPlan $PolicyPlan -RemediationResults $RemediationResults
+
+    $structuredReport = [ordered]@{
+        timestamp            = $Evidence.system.timestamp
+        hostname             = $Evidence.system.hostname
+        os                   = $osInfo
+        gpu_adapters         = $gpuAdapters
+        display_adapters     = $displayAdapters
+        monitor_devices      = $monitorDevices
+        current_resolution   = if ($resolution) { $resolution.resolutionString } else { $null }
+        suspected_tags       = $Classification.tags
+        evidence_items       = $Classification.evidence
+        confidence_level     = $Classification.confidence
+        explanation          = $Classification.explanation
+        recommended_actions  = $actionLists.recommendedActions
+        preview_actions      = $actionLists.previewActions
+        applied_actions      = $actionLists.appliedActions
+        safety_warnings      = $safetyNotes.ToArray()
+        verification_result  = $Verification
+    }
+
     return [PSCustomObject]@{
-        schemaVersion = '1.0.0'
-        generatedAt   = (Get-Date).ToUniversalTime().ToString('o')
-        mode          = $Mode
-        hostname      = $Evidence.system.hostname
-        username      = $Evidence.system.username
-        summary       = [ordered]@{
+        schemaVersion      = Get-ReportSchemaVersion
+        generatedAt        = (Get-Date).ToUniversalTime().ToString('o')
+        mode               = $Mode
+        hostname           = $Evidence.system.hostname
+        username           = $Evidence.system.username
+        report             = $structuredReport
+        summary            = [ordered]@{
             timestamp                 = $Evidence.system.timestamp
-            osVersion                 = if ($Evidence.system.operatingSystem.status -eq 'ok') { $Evidence.system.operatingSystem.data.version } else { $null }
+            osVersion                 = if ($osInfo) { $osInfo.version } else { $null }
             powershellVersion         = $Evidence.system.powershellVersion
             adminStatus               = $isAdmin
             activeDisplayResolution   = if ($resolution) { $resolution.resolutionString } else { $null }
@@ -90,6 +168,7 @@ function New-NvFailsafeReport {
             monitorPnPStatus          = $monitorPnPStatus
             classification            = $Classification.classification
             confidence                = $Classification.confidence
+            explanation               = $Classification.explanation
             recommendedNextStep       = $Classification.recommendedNextStep
             safetyNotes               = $safetyNotes.ToArray()
         }
@@ -137,16 +216,24 @@ function Write-HumanSummary {
 
     switch ($s.classification) {
         'NV_FAILSAFE_SUSPECTED' { Add-SummaryLine -Prefix 'WARN' -Message 'NV-Failsafe suspected based on available evidence.' }
-        'NORMAL_DISPLAY_STATE' { Add-SummaryLine -Prefix 'OK' -Message 'No NV-Failsafe indicators in current evidence.' }
+        'NO_ISSUE_DETECTED' { Add-SummaryLine -Prefix 'OK' -Message 'No active NV-Failsafe indicators in current evidence.' }
+        'NORMAL_DISPLAY_STATE' { Add-SummaryLine -Prefix 'OK' -Message 'No active NV-Failsafe indicators in current evidence.' }
         'INSUFFICIENT_DATA' { Add-SummaryLine -Prefix 'WARN' -Message 'Insufficient data for high-confidence classification.' }
         default { Add-SummaryLine -Prefix 'INFO' -Message "Classification: $($s.classification) (confidence $($s.confidence))." }
+    }
+
+    if ($s.explanation) {
+        Add-SummaryLine -Prefix 'INFO' -Message $s.explanation
     }
 
     Add-SummaryLine -Prefix 'INFO' -Message "Recommended next step: $($s.recommendedNextStep)"
 
     if ($Report.policyPlan) {
         foreach ($item in $Report.policyPlan) {
-            if ($item.executionMode -eq 'preview' -and $item.allowed) {
+            if ($item.executionMode -eq 'manual_only') {
+                Add-SummaryLine -Prefix 'MANUAL' -Message "$($item.action): manual-only escalation."
+            }
+            elseif ($item.executionMode -eq 'preview' -and $item.allowed) {
                 Add-SummaryLine -Prefix 'PREVIEW' -Message "Would run action: $($item.action)"
             }
             elseif (-not $item.allowed) {
@@ -186,6 +273,46 @@ function Write-JsonReport {
     Set-Content -LiteralPath $OutputPath -Value $json -Encoding UTF8
 }
 
+function Test-ReportBlockHasProperty {
+    param(
+        [object]$Block,
+        [string]$Name
+    )
+
+    if ($null -eq $Block) { return $false }
+    if ($Block -is [System.Collections.IDictionary]) {
+        return $Block.Contains($Name)
+    }
+    return ($Block.PSObject.Properties.Name -contains $Name)
+}
+
+function Test-NvFailsafeReportShape {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [object]$Report
+    )
+
+    $required = @('schemaVersion', 'generatedAt', 'mode', 'hostname', 'report', 'summary', 'classification')
+    foreach ($name in $required) {
+        if (-not ($Report.PSObject.Properties.Name -contains $name)) {
+            return $false
+        }
+    }
+
+    $reportRequired = @(
+        'timestamp', 'hostname', 'current_resolution', 'suspected_tags',
+        'evidence_items', 'confidence_level', 'explanation', 'safety_warnings'
+    )
+    foreach ($name in $reportRequired) {
+        if (-not (Test-ReportBlockHasProperty -Block $Report.report -Name $name)) {
+            return $false
+        }
+    }
+
+    return $true
+}
+
 function Compare-NvFailsafeReports {
     [CmdletBinding()]
     param(
@@ -198,6 +325,8 @@ function Compare-NvFailsafeReports {
 
     $before = $BeforeReport.summary
     $after = $AfterReport.summary
+
+    $resolvedClassifications = @('NO_ISSUE_DETECTED', 'NORMAL_DISPLAY_STATE')
 
     return [PSCustomObject]@{
         comparedAt = (Get-Date).ToUniversalTime().ToString('o')
@@ -219,7 +348,7 @@ function Compare-NvFailsafeReports {
         confidenceAfter = $after.confidence
         improved = (
             ($before.is640x480 -and -not $after.is640x480) -or
-            ($before.classification -eq 'NV_FAILSAFE_SUSPECTED' -and $after.classification -eq 'NORMAL_DISPLAY_STATE')
+            ($before.classification -eq 'NV_FAILSAFE_SUSPECTED' -and ($after.classification -in $resolvedClassifications))
         )
     }
 }

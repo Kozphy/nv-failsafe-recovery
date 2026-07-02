@@ -2,24 +2,24 @@
 
 ## Actions
 
-| Action | Risk | Admin | -Apply | -Force | FixLevels |
-|--------|------|-------|--------|--------|-----------|
-| `DISPLAY_REFRESH_HINT` | low | no | no | no | safe, monitor, adapter |
-| `EXPLORER_RESTART` | low | no | yes | no | safe, monitor, adapter |
-| `PNP_RESCAN` | medium | yes | yes | no | monitor, adapter |
-| `MONITOR_REFRESH` | medium | yes | yes | no | monitor, adapter |
-| `ADAPTER_RESTART` | high | yes | yes | yes | adapter |
-| `DRIVER_REINSTALL_GUIDANCE` | guidance | no | no | no | all |
-| `DDU_LAST_RESORT_GUIDANCE` | guidance | no | no | no | all |
+| Action | Risk | Admin | -Apply | -Force | FixLevels | Escalation |
+|--------|------|-------|--------|--------|-----------|------------|
+| `DISPLAY_REFRESH_HINT` | low | no | no | no | safe, monitor, adapter | automated preview |
+| `EXPLORER_RESTART` | low | no | yes | no | safe, monitor, adapter | automated apply |
+| `PNP_RESCAN` | medium | yes | yes | no | monitor, adapter | automated apply |
+| `MONITOR_REFRESH` | medium | yes | yes | no | monitor, adapter | automated apply |
+| `ADAPTER_RESTART` | high | yes | yes | yes | adapter | automated apply |
+| `DRIVER_REINSTALL_GUIDANCE` | guidance | no | no | no | all | **manual-only** |
+| `DDU_LAST_RESORT_GUIDANCE` | guidance | no | no | no | all | **manual-only** |
 
-## Fix levels
+## Manual-only escalation
 
-| FixLevel | Intended use |
-|----------|--------------|
-| `none` | Detect/report only |
-| `safe` | Hints + optional Explorer restart |
-| `monitor` | Adds PnP/monitor refresh |
-| `adapter` | Adds NVIDIA adapter restart (high risk) |
+These are never executed by the toolkit:
+
+- NVIDIA driver reinstall
+- DDU usage
+- Custom resolution forcing
+- Hardware replacement decisions
 
 ## Policy decision object
 
@@ -27,27 +27,22 @@
 {
   "action": "ADAPTER_RESTART",
   "allowed": false,
-  "reason": "Requires administrator, -Apply, and -Force.",
-  "requiredFlags": ["Apply", "Force"],
-  "riskLevel": "high"
+  "reason": "Requires -Force flag.",
+  "requiredFlags": ["Force"],
+  "riskLevel": "high",
+  "manualOnly": false,
+  "executionMode": "preview"
 }
 ```
 
-## Explicit non-actions
-
-The toolkit **never** automates:
-
-- Driver uninstall/reinstall
-- DDU
-- Custom resolution forcing
-- Registry edits (default)
-- Arbitrary process termination
+`executionMode` values: `preview`, `apply`, `blocked`, `manual_only`.
 
 ## Audit requirements
 
-Every apply action writes:
+Every preview/apply/blocked action logs:
 
-1. `remediation_start` (or `policy_blocked`)
-2. `remediation_complete` / `remediation_error`
+- `action`, `timestamp`, `mode`, `fixLevel`
+- `applyUsed`, `forceUsed`, `executionMode`
+- `policyDecision`, `result`, `error`
 
-Audit path defaults to `.\nv-failsafe-audit.jsonl` and is append-only.
+Audit logs are append-only.

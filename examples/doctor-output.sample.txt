@@ -1,0 +1,28 @@
+=== NV-Failsafe Recovery Doctor ===
+[OK] NVIDIA adapter detected: NVIDIA GeForce RTX 3080
+[WARN] Current resolution is 640x480.
+[WARN] NV-Failsafe suspected based on available evidence.
+[INFO] Evidence indicates a suspected NVIDIA NV-Failsafe / 640x480 fallback pattern. This is a hypothesis based on resolution and adapter evidence, not proof of hardware failure.
+[INFO] Recommended next step: Try Win+Ctrl+Shift+B, then power-cycle monitor and replug HDMI/DisplayPort before automated fixes.
+[PREVIEW] Would run action: DISPLAY_REFRESH_HINT
+[BLOCKED] ADAPTER_RESTART: Requires -Force flag.
+[SAFETY] Classification is evidence-based suspicion, not proof.
+[SAFETY] Remediation defaults to preview-only without -Apply.
+[SAFETY] Adapter restart requires -Apply and -Force and may blank the display.
+
+Likely cause (evidence-based):
+  Evidence indicates a suspected NVIDIA NV-Failsafe / 640x480 fallback pattern. This is a hypothesis based on resolution and adapter evidence, not proof of hardware failure.
+  - Active resolution is exactly 640x480 with NVIDIA adapter present.
+  - Monitor name evidence indicates NV-Failsafe.
+  - One or more monitors appear generic or non-specific.
+
+Manual next steps:
+  - Press Win+Ctrl+Shift+B to reset the graphics driver.
+  - Power-cycle the monitor and replug the display cable.
+  - Try another HDMI/DisplayPort cable or GPU output port.
+
+Automated next steps:
+  - Run Fix mode with -FixLevel safe (preview first).
+  - Consider Fix mode -FixLevel monitor with -Apply if handshake suspicion persists.
+
+Doctor mode did not change system state (no -Apply).
