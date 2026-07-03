@@ -1,0 +1,46 @@
+name: Python CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  validate:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package and dev dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Verify package version
+        shell: pwsh
+        run: |
+          $version = python -c "import importlib.metadata as m; print(m.version('nv-failsafe-recovery'))"
+          if ([string]::IsNullOrWhiteSpace($version)) { throw 'Package version is required.' }
+          Write-Host "Package version $version validated."
+
+      - name: Run smoke test
+        shell: pwsh
+        run: python scripts/invoke_smoke_test.py
+
+      - name: Run pytest
+        shell: pwsh
+        run: pytest
+
+      - name: Run ruff
+        shell: pwsh
+        continue-on-error: true
+        run: ruff check nv_failsafe_recovery tests scripts

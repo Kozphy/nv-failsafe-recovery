@@ -4,53 +4,52 @@ This project uses tag-driven continuous delivery via [`.github/workflows/release
 
 ## Versioning
 
-1. Update `ModuleVersion` in `psd1/NvFailsafeRecovery.psd1`.
-2. Ensure `Get-ToolkitVersion` in `src/Utilities.ps1` matches.
-3. Report schema is versioned separately via `Get-ReportSchemaVersion` (currently `1.1.0`).
+1. Update `version` in `pyproject.toml` (toolkit version, currently **2.0.0**).
+2. Update `TOOLKIT_VERSION` in `nv_failsafe_recovery/version.py` to match.
+3. Report schema is versioned separately via `REPORT_SCHEMA_VERSION` (currently **1.1.0**).
+
+Legacy PowerShell v1.1.0 remains under `legacy/powershell/psd1/` for archival reference only.
 
 ## Cut a release
 
 ```bash
-git add psd1/NvFailsafeRecovery.psd1 src/Utilities.ps1
-git commit -m "Release v1.1.0"
-git tag v1.1.0
+git add pyproject.toml nv_failsafe_recovery/version.py
+git commit -m "Release v2.0.0"
+git tag v2.0.0
 git push origin main
-git push origin v1.1.0
+git push origin v2.0.0
 ```
 
 ## Release pipeline
 
 On tag push (`v*`):
 
-1. Verify tag matches `ModuleVersion`
-2. Parse all PowerShell scripts
-3. Install Pester and run full test suite
-4. Package release zip
+1. Verify tag matches `pyproject.toml` version
+2. Install Python package and dev dependencies
+3. Run smoke test and pytest
+4. Package release zip (Python package + docs + legacy sources)
 5. Generate SHA256 checksum
 6. Publish GitHub Release artifact
 
 ## Pre-release checklist
 
-- [ ] CI green on `main`
-- [ ] `Invoke-SmokeTest.ps1` passes locally
-- [ ] `Invoke-Pester -Path ./tests` passes locally
+- [ ] Python CI green on `main`
+- [ ] `python scripts/invoke_smoke_test.py` passes locally
+- [ ] `pytest` passes locally on Windows
 - [ ] README and docs reflect any behavior changes
 - [ ] No local incident reports committed
 
 ## Consumer install
 
-Download the release zip from GitHub Releases, extract, and run:
+1. Download release zip from GitHub Releases.
+2. Verify SHA256 checksum.
+3. Extract and install:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\NvFailsafeRecovery.ps1 -Mode Detect
+pip install -e .
+python -m nv_failsafe_recovery --mode detect
 ```
 
-Verify checksum before use in regulated environments.
+## Safety reminder
 
-## What releases do not include
-
-- Automatic Fix mode deployment
-- Driver uninstall packages
-- DDU or registry mutation tooling
-
-Releases are read-only diagnostic/recovery scripts intended for controlled endpoint use.
+Releases must preserve preview-first semantics. Never ship builds that auto-apply adapter restart or driver removal.

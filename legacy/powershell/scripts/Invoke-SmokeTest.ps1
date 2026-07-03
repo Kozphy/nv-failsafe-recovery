@@ -10,7 +10,8 @@ param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$repoRoot = Split-Path -Parent $PSScriptRoot
+$legacyRoot = Split-Path -Parent $PSScriptRoot
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $failures = [System.Collections.Generic.List[string]]::new()
 
 function Assert-True {
@@ -19,7 +20,6 @@ function Assert-True {
 }
 
 $requiredFiles = @(
-    'README.md',
     'scripts\NvFailsafeRecovery.ps1',
     'src\Evidence.ps1',
     'src\Classifier.ps1',
@@ -31,11 +31,11 @@ $requiredFiles = @(
 )
 
 foreach ($relative in $requiredFiles) {
-    $path = Join-Path $repoRoot $relative
+    $path = Join-Path $legacyRoot $relative
     Assert-True -Condition (Test-Path -LiteralPath $path) -Message "Missing required file: $relative"
 }
 
-$ps1Files = Get-ChildItem -Path $repoRoot -Recurse -Filter '*.ps1' | Where-Object { $_.FullName -notmatch '\\\.git\\' }
+$ps1Files = Get-ChildItem -Path $legacyRoot -Recurse -Filter '*.ps1' | Where-Object { $_.FullName -notmatch '\\\.git\\' }
 foreach ($file in $ps1Files) {
     $errors = $null
     $null = [System.Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$null, [ref]$errors)
@@ -44,7 +44,7 @@ foreach ($file in $ps1Files) {
     }
 }
 
-$detectOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot 'scripts\NvFailsafeRecovery.ps1') -Mode Detect -Quiet 2>&1
+$detectOutput = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $legacyRoot 'scripts\NvFailsafeRecovery.ps1') -Mode Detect -Quiet 2>&1
 $detectText = ($detectOutput | Out-String)
 Assert-True -Condition ($LASTEXITCODE -eq 0) -Message 'Detect mode failed to execute.'
 Assert-True -Condition ($detectText -notmatch 'Disable-PnpDevice|pnputil /scan-devices|Stop-Process -Name explorer') -Message 'Detect mode appears to execute remediation commands.'

@@ -2,11 +2,13 @@
 
 Evidence-first Windows toolkit for NVIDIA **NV-Failsafe**, **640×480** fallback, HDMI/DisplayPort EDID handshake failure, generic monitor drift, and driver fallback states.
 
-[![PowerShell CI](https://github.com/Kozphy/nv-failsafe-recovery/actions/workflows/powershell-ci.yml/badge.svg)](https://github.com/Kozphy/nv-failsafe-recovery/actions/workflows/powershell-ci.yml)
+[![Python CI](https://github.com/Kozphy/nv-failsafe-recovery/actions/workflows/python-ci.yml/badge.svg)](https://github.com/Kozphy/nv-failsafe-recovery/actions/workflows/python-ci.yml)
 [![Release](https://img.shields.io/github/v/release/Kozphy/nv-failsafe-recovery?label=release)](https://github.com/Kozphy/nv-failsafe-recovery/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > **Disclaimer:** This toolkit reports *suspected* states from local evidence. It does not prove hardware failure, does not guarantee fixes, and is not a substitute for vendor support or formal incident response.
+
+**Version 2.0.0** is the Python implementation. PowerShell v1.1.0 is preserved under [`legacy/powershell/`](legacy/powershell/). See [Migration guide](docs/migration-powershell-to-python.md).
 
 ## Mission
 
@@ -16,62 +18,56 @@ Observe → Classify → Recommend → Preview → Apply → Audit → Verify
 
 Built for endpoint reliability, Windows support engineering, and audit-friendly operations — not one-click “fix my GPU” automation.
 
-## Problem overview
+## Requirements
 
-Windows may present:
-
-```text
-NV-Failsafe
-640×480
-Generic PnP Monitor
-limited resolution list
-```
-
-Evidence often indicates handshake, monitor detection, or driver fallback issues — **before** assuming hardware failure.
-
-## Safety model
-
-| Rule | Behavior |
-|------|----------|
-| Preview-first | No mutations without `-Apply` |
-| Adapter restart | Requires `-Apply` **and** `-Force` |
-| Driver reinstall / DDU | Manual-only guidance |
-| Audit | Append-only JSONL |
-| Claims | Evidence-based language only |
-
-Details: [docs/safety-model.md](docs/safety-model.md)
+- Windows 10/11
+- Python **3.11+**
+- Administrator elevation for monitor/PnP remediation actions only
 
 ## Quick start
 
 ```powershell
 git clone https://github.com/Kozphy/nv-failsafe-recovery.git
 cd nv-failsafe-recovery
-powershell -ExecutionPolicy Bypass -File .\scripts\NvFailsafeRecovery.ps1 -Mode Detect
+pip install -e ".[dev]"
+python -m nv_failsafe_recovery --mode detect
 ```
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\NvFailsafeRecovery.ps1 -Mode Report -OutputPath .\report.json
-powershell -ExecutionPolicy Bypass -File .\scripts\NvFailsafeRecovery.ps1 -Mode Doctor
+python -m nv_failsafe_recovery --mode report --output-path .\report.json
+python -m nv_failsafe_recovery --mode doctor
 ```
 
 ## CLI examples
 
 ```powershell
 # Preview safe fixes
-powershell -ExecutionPolicy Bypass -File .\scripts\NvFailsafeRecovery.ps1 -Mode Fix -FixLevel safe
+python -m nv_failsafe_recovery --mode fix --fix-level safe
 
 # Apply safe fixes
-powershell -ExecutionPolicy Bypass -File .\scripts\NvFailsafeRecovery.ps1 -Mode Fix -FixLevel safe -Apply
+python -m nv_failsafe_recovery --mode fix --fix-level safe --apply
 
 # Admin: monitor/PnP refresh
-powershell -ExecutionPolicy Bypass -File .\scripts\NvFailsafeRecovery.ps1 -Mode Fix -FixLevel monitor -Apply
+python -m nv_failsafe_recovery --mode fix --fix-level monitor --apply
 
 # High risk: NVIDIA adapter restart
-powershell -ExecutionPolicy Bypass -File .\scripts\NvFailsafeRecovery.ps1 -Mode Fix -FixLevel adapter -Apply -Force
+python -m nv_failsafe_recovery --mode fix --fix-level adapter --apply --force
 
 # Verify against baseline report
-powershell -ExecutionPolicy Bypass -File .\scripts\NvFailsafeRecovery.ps1 -Mode Verify -BaselineReportPath .\report.json
+python -m nv_failsafe_recovery --mode verify --baseline-report-path .\report.json
 ```
+
+## Safety model
+
+| Rule | Behavior |
+|------|----------|
+| Preview-first | No mutations without `--apply` |
+| Adapter restart | Requires `--apply` **and** `--force` |
+| Driver reinstall / DDU | Manual-only guidance |
+| Audit | Append-only JSONL |
+| Claims | Evidence-based language only |
+
+Details: [docs/safety-model.md](docs/safety-model.md)
 
 ## Classification tags (summary)
 
@@ -85,23 +81,12 @@ powershell -ExecutionPolicy Bypass -File .\scripts\NvFailsafeRecovery.ps1 -Mode 
 | `NO_ISSUE_DETECTED` | No active fallback detected |
 | `INSUFFICIENT_DATA` | Probe collection incomplete |
 
-## Troubleshooting
-
-| Symptom | Tag | First step |
-|---------|-----|------------|
-| 640×480 + NVIDIA | `NV_FAILSAFE_SUSPECTED` | Win+Ctrl+Shift+B, reseat cable |
-| Generic monitor | `GENERIC_MONITOR_PROFILE_SUSPECTED` | Check EDID/cable/port |
-| GPU status not OK | `NVIDIA_DRIVER_FALLBACK_SUSPECTED` | Manual driver reinstall guidance |
-| Probe failures | `INSUFFICIENT_DATA` | Re-run Report elevated |
-
-Playbook: [docs/troubleshooting-playbook.md](docs/troubleshooting-playbook.md) · Runbook: [docs/runbook.md](docs/runbook.md)
-
 ## Scheduled reporting
 
 Report-only at logon (never auto-fixes):
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\Install-ScheduledTask.ps1
+python scripts/install_scheduled_task.py
 ```
 
 Output: `%LOCALAPPDATA%\NvFailsafeRecovery\nv-failsafe-report.json`
@@ -117,17 +102,19 @@ Output: `%LOCALAPPDATA%\NvFailsafeRecovery\nv-failsafe-report.json`
 ## Repository layout
 
 ```text
-scripts/   CLI entrypoints
-src/       Evidence, classifier, policy, remediation, audit, reporting
-tests/     Pester tests
-docs/      Architecture, safety, runbooks, release process
-examples/  Sample reports, audit logs, doctor output
-.github/   CI and release workflows
+nv_failsafe_recovery/   Python package (CLI, evidence, policy, remediation)
+scripts/                Smoke test and scheduled-task helpers
+tests/                  pytest suite
+docs/                   Architecture, safety, runbooks, migration
+examples/               Sample reports, audit logs, doctor output
+legacy/powershell/      PowerShell v1.1.0 sources (archived)
+.github/                CI and release workflows
 ```
 
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [Migration: PowerShell → Python](docs/migration-powershell-to-python.md)
 - [Evidence schema](docs/evidence-schema.md) (v1.1.0)
 - [Classification model](docs/classification-model.md)
 - [Remediation policy](docs/remediation-policy.md)
@@ -139,9 +126,9 @@ examples/  Sample reports, audit logs, doctor output
 Tag-driven CD via [`.github/workflows/release.yml`](.github/workflows/release.yml):
 
 ```bash
-# Update ModuleVersion in psd1/NvFailsafeRecovery.psd1, then:
-git commit -am "Release v1.1.0"
-git tag v1.1.0
+# Update version in pyproject.toml, then:
+git commit -am "Release v2.0.0"
+git tag v2.0.0
 git push origin main --tags
 ```
 
@@ -150,8 +137,9 @@ See [docs/release-process.md](docs/release-process.md).
 ## Local validation
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\Invoke-SmokeTest.ps1
-Invoke-Pester -Path .\tests
+pip install -e ".[dev]"
+python scripts/invoke_smoke_test.py
+pytest
 ```
 
 ## License
